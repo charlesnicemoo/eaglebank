@@ -8,16 +8,15 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class TransactionService {
     @Autowired
     TransactionRepo transactionRepo;
-
-    // TODO: think of how to improve cache transactions, since 1:many relationship from acc.
-    //  Will use SB internal cache for now, but lets explore caffeine cache later.
-    //  We can boost perf this way especially since transactions are not often modified.
 
     @Cacheable(value = "transactions", key = "#transactionId")
     public Optional<Transaction> getTransactionByTransactionId(Long transactionId) {
@@ -25,8 +24,17 @@ public class TransactionService {
     }
 
     @Transactional
-    public Transaction createTransaction(TransactionDTO transaction) {
-        return new Transaction();
+    public Transaction createTransaction(TransactionDTO transactionDTO) {
+        Transaction transaction = new Transaction();
+        transaction.setId(UUID.randomUUID().toString());
+        transaction.setAmount(BigDecimal.valueOf(Double.parseDouble(transactionDTO.amount())));
+        transaction.setCurrency(transactionDTO.currency());
+        transaction.setType(transactionDTO.type());
+        // Change this later
+        transaction.setUserId(UUID.randomUUID().toString());
+        transaction.setReference(transactionDTO.reference());
+        transaction.setCreatedTimestamp(Instant.now().toString());
+        return transactionRepo.save(transaction);
     }
 
 }

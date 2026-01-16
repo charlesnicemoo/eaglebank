@@ -1,4 +1,4 @@
-package com.eaglebank.account.domain.dto;
+package com.eaglebank.transaction.domain;
 
 public record AccountBalanceTransactionDTO(
         String amount,

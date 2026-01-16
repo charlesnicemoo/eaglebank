@@ -1,19 +1,20 @@
 package com.eaglebank.account.service;
 
-import com.eaglebank.account.domain.AccountTransactionEvent;
 import com.eaglebank.account.domain.dto.AccountBalanceTransactionDTO;
 import com.eaglebank.account.domain.dto.AccountResponseDTO;
 import com.eaglebank.account.domain.dto.NewAccountDTO;
 import com.eaglebank.account.domain.Account;
+import com.eaglebank.account.domain.dto.TransactionResponseDTO;
 import com.eaglebank.account.repo.AccountRepo;
 import com.eaglebank.account.utils.AccountUtils;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,13 +26,13 @@ import java.util.Optional;
 public class AccountService {
 
     private final AccountRepo accountRepo;
-    private final ApplicationEventPublisher eventPublisher;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private static final Logger LOGGER = LoggerFactory.getLogger(AccountService.class);
     private final static List<String> availableSortCodes = List.of("10-10-10", "10-10-11", "10-10-12");
 
-    public AccountService(AccountRepo accountRepo, ApplicationEventPublisher eventPublisher) {
+    public AccountService(AccountRepo accountRepo, KafkaTemplate<String, Object> kafkaTemplate) {
         this.accountRepo = accountRepo;
-        this.eventPublisher = eventPublisher;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     // Lets cache this for read performance, spare our poor Hikari connection pool some hassle.
@@ -73,12 +74,21 @@ public class AccountService {
         Optional<Account> accountOptional = accountRepo.findById(Long.valueOf(accountNumber));
         if (accountOptional.isPresent()) {
             Account account = accountOptional.get();
-            BigDecimal newBalance = account.getBalance().add(BigDecimal.valueOf(Double.valueOf(accountBalanceTransactionDTO.amount())));
+            BigDecimal newBalance = account.getBalance().add(BigDecimal.valueOf(Double.parseDouble(accountBalanceTransactionDTO.amount())));
             account.setUpdatedTimestamp(Instant.now().toString());
             account.setBalance(newBalance);
             accountRepo.save(account);
-            // Send off Kafka event in here if it fails to send etc transactional will roll back the DB.
-            eventPublisher.publishEvent(new AccountTransactionEvent());
+            // Send off Kafka event here if exception sending message, transactional will roll back.
+            //kafkaTemplate.send("transactions", accountBalanceTransactionDTO);
+
+            // This .body() chain should throw exception if 4/500 this keeping data conistent due to transactional
+            TransactionResponseDTO transaction = RestClient.create()
+                    .post()
+                    .uri("http://localhost:9090/v1/transaction")
+                    .body(accountBalanceTransactionDTO)
+                    .retrieve()
+                    .body(TransactionResponseDTO.class);
+
             return Optional.of(AccountUtils.paddedAccount(account));
         }
         return Optional.empty();

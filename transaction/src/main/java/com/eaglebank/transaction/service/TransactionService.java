@@ -27,6 +27,7 @@ public class TransactionService {
     public Transaction createTransaction(TransactionDTO transactionDTO) {
         Transaction transaction = new Transaction();
         transaction.setId(UUID.randomUUID().toString());
+        transaction.setAccountNumber(transactionDTO.accountNumber());
         transaction.setAmount(BigDecimal.valueOf(Double.parseDouble(transactionDTO.amount())));
         transaction.setCurrency(transactionDTO.currency());
         transaction.setType(transactionDTO.type());

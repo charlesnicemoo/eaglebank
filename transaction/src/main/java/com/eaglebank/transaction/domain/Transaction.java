@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public class Transaction {
     @Id
     private String id;
+    private String accountNumber;
     private BigDecimal amount;
     private String currency;
     private String type;
@@ -20,8 +21,9 @@ public class Transaction {
 
     }
 
-    public Transaction(String id, BigDecimal amount, String currency, String type, String reference, String userId, String createdTimestamp) {
+    public Transaction(String id, String accountNumber, BigDecimal amount, String currency, String type, String reference, String userId, String createdTimestamp) {
         this.id = id;
+        this.accountNumber = accountNumber;
         this.amount = amount;
         this.currency = currency;
         this.type = type;
@@ -84,5 +86,12 @@ public class Transaction {
 
     public void setCreatedTimestamp(String createdTimestamp) {
         this.createdTimestamp = createdTimestamp;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+    public void setAccountNumber(String accountNumber) {
+        this.accountNumber = accountNumber;
     }
 }

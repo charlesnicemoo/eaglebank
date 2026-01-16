@@ -78,10 +78,12 @@ public class AccountService {
             account.setUpdatedTimestamp(Instant.now().toString());
             account.setBalance(newBalance);
             accountRepo.save(account);
+
+            // Keeping here for sake of mentioning, not sure why not working atm. Sort later. Use Rest instead for now.
             // Send off Kafka event here if exception sending message, transactional will roll back.
             //kafkaTemplate.send("transactions", accountBalanceTransactionDTO);
 
-            // This .body() chain should throw exception if 4/500 this keeping data conistent due to transactional
+            // This .body() chain should throw exception if 4/500 this keeping data consistent due to transactional
             TransactionResponseDTO transaction = RestClient.create()
                     .post()
                     .uri("http://localhost:9090/v1/transaction")
